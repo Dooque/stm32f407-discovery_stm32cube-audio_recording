@@ -100,7 +100,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* hi2s)
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**I2S2 GPIO Configuration    
-    PC3     ------> I2S2_SD
+    PC3      ------> I2S2_SD
     PB10     ------> I2S2_CK
     PB12     ------> I2S2_WS 
     */

@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -103,6 +103,19 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  static const char *const data = "Hola!\n";
+  HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
+  static uint16_t buffer[1024];
+  HAL_I2S_Receive(&hi2s2, buffer, 1024, 100);
+
+  char str_value[16];
+  for (unsigned int i = 0u; i < 1024; ++i)
+  {
+    memset(str_value, 0, 16);
+    itoa(buffer[i], str_value, 10);
+    HAL_UART_Transmit(&huart2, str_value, strlen(str_value), 100u);
+    HAL_UART_Transmit(&huart2, " ", 1, 100u);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
