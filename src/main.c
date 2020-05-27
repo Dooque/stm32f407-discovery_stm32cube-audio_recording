@@ -1,4 +1,3 @@
-#include "stm32f4_discovery_audio.h"
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
@@ -17,6 +16,7 @@
   *
   ******************************************************************************
   */
+#include "stm32f4_discovery_audio.h"
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
@@ -104,11 +104,19 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  static const char *const data = "Hola!\n";
+  static const char *const data = "STM32F4 Discovery Started!\n";
   HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
-  static uint16_t buffer[1024];
-  HAL_I2S_Receive(&hi2s2, buffer, 1024, 100);
 
+  //static uint16_t buffer[1024];
+  //HAL_I2S_Receive(&hi2s2, buffer, 1024, 100);
+
+  if (BSP_AUDIO_IN_Init(8000, 16, 0) != AUDIO_OK)
+  {
+    static const char *const ErrMsgAudioInitFailed = "BSP_AUDIO_IN_Init() -> [FAILED]\n";
+    HAL_UART_Transmit(&huart2, ErrMsgAudioInitFailed, strlen(ErrMsgAudioInitFailed), 100u);
+  }
+
+  /*
   char str_value[16];
   for (unsigned int i = 0u; i < 1024; ++i)
   {
@@ -117,6 +125,7 @@ int main(void)
     HAL_UART_Transmit(&huart2, str_value, strlen(str_value), 100u);
     HAL_UART_Transmit(&huart2, " ", 1, 100u);
   }
+  */
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -140,17 +149,17 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /** Macro to configure the PLL multiplication factor 
+  /** Macro to configure the PLL multiplication factor
   */
   __HAL_RCC_PLL_PLLM_CONFIG(16);
-  /** Macro to configure the PLL clock source 
+  /** Macro to configure the PLL clock source
   */
   __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSI);
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -161,7 +170,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -288,10 +297,10 @@ static void MX_USART2_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -348,7 +357,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
