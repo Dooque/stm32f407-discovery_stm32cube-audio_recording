@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "i2s.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
@@ -32,7 +33,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define AUDIO_BUFFER_SIZE 4096
+#define AUDIO_BUFFER_SIZE 4096*2
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -45,11 +46,11 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
 unsigned int isHalfBuffer = 0u;
 unsigned int isFullBuffer = 0u;
 unsigned int audioErrorCb = 0u;
-/* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,13 +95,14 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_USART2_UART_Init();
+  MX_I2S2_Init();
   /* USER CODE BEGIN 2 */
 
   static const char *const data = "STM32F4 Discovery Started!\n";
   HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
 
   // DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION, DEFAULT_AUDIO_IN_CHANNEL_NBR
-  if (BSP_AUDIO_IN_Init(16000u, 16u, 0u) != AUDIO_OK)
+  if (BSP_AUDIO_IN_Init(8000u, 16u, 0u) != AUDIO_OK)
   {
     static const char *const ErrMsgAudioInitFailed = "BSP_AUDIO_IN_Init() -> [FAILED]\n";
     HAL_UART_Transmit(&huart2, ErrMsgAudioInitFailed, strlen(ErrMsgAudioInitFailed), 100u);
@@ -129,9 +131,9 @@ int main(void)
 
     if (isFullBuffer)
     {
-      //BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
-
       isFullBuffer = 0u;
+      BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
+
       static const char *const msgFullBuffer = "F\n";
       HAL_UART_Transmit(&huart2, msgFullBuffer, strlen(msgFullBuffer), 100u);
     }
@@ -143,6 +145,7 @@ int main(void)
       HAL_UART_Transmit(&huart2, msgAudioError, strlen(msgAudioError), 100u);
     }
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -156,7 +159,14 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
+  /** Macro to configure the PLL multiplication factor 
+  */
+  __HAL_RCC_PLL_PLLM_CONFIG(16);
+  /** Macro to configure the PLL clock source 
+  */
+  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSI);
   /** Configure the main internal regulator output voltage 
   */
   __HAL_RCC_PWR_CLK_ENABLE();
@@ -167,6 +177,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -181,6 +192,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2S;
+  PeriphClkInitStruct.PLLI2S.PLLI2SN = 192;
+  PeriphClkInitStruct.PLLI2S.PLLI2SR = 2;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }
