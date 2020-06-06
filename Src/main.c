@@ -45,9 +45,9 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-volatile unsigned int isHalfBuffer = 0u;
-volatile unsigned int isFullBuffer = 0u;
-volatile unsigned int audioErrorCb = 0u;
+unsigned int isHalfBuffer = 0u;
+unsigned int isFullBuffer = 0u;
+unsigned int audioErrorCb = 0u;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -120,24 +120,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
     if (isHalfBuffer)
     {
       isHalfBuffer = 0u;
-      //static char str_value[16];
-
       static const char *const msgHalfBuffer = "H\n";
       HAL_UART_Transmit(&huart2, msgHalfBuffer, strlen(msgHalfBuffer), 100u);
-
-      /*
-      for (unsigned int i = 0u; i < AUDIO_BUFFER_SIZE; ++i)
-      {
-        memset(str_value, 0, 16);
-        itoa(audioBuffer[i], str_value, 10);
-        HAL_UART_Transmit(&huart2, str_value, strlen(str_value), 100u);
-        HAL_UART_Transmit(&huart2, " ", 1, 100u);
-      }
-      */
     }
 
     if (isFullBuffer)
@@ -145,22 +132,8 @@ int main(void)
       //BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
 
       isFullBuffer = 0u;
-      //static char str_value[16];
-
       static const char *const msgFullBuffer = "F\n";
       HAL_UART_Transmit(&huart2, msgFullBuffer, strlen(msgFullBuffer), 100u);
-
-      /*
-      for (unsigned int i = 0u; i < AUDIO_BUFFER_SIZE; ++i)
-      {
-        memset(str_value, 0, 16);
-        itoa(audioBuffer[i], str_value, 10);
-        HAL_UART_Transmit(&huart2, str_value, strlen(str_value), 100u);
-        HAL_UART_Transmit(&huart2, " ", 1, 100u);
-      }
-      */
-
-      //BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
     }
 
     if (audioErrorCb)
@@ -169,6 +142,7 @@ int main(void)
       static const char *const msgAudioError = "Audio Error!\n";
       HAL_UART_Transmit(&huart2, msgAudioError, strlen(msgAudioError), 100u);
     }
+    /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -215,7 +189,6 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void BSP_AUDIO_IN_TransferComplete_CallBack(void)
 {
-  //SCB_InvalidateDCache();
   isFullBuffer = 1u;
 }
 
