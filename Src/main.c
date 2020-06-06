@@ -50,7 +50,7 @@
 /* USER CODE BEGIN PV */
 unsigned int isHalfBuffer = 0u;
 unsigned int isFullBuffer = 0u;
-unsigned int audioErrorCb = 0u;
+unsigned int isAudioError = 0u;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,7 +102,7 @@ int main(void)
   HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
 
   // DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION, DEFAULT_AUDIO_IN_CHANNEL_NBR
-  if (BSP_AUDIO_IN_Init(8000u, 16u, 0u) != AUDIO_OK)
+  if (BSP_AUDIO_IN_Init(16000u, 16u, 0u) != AUDIO_OK)
   {
     static const char *const ErrMsgAudioInitFailed = "BSP_AUDIO_IN_Init() -> [FAILED]\n";
     HAL_UART_Transmit(&huart2, ErrMsgAudioInitFailed, strlen(ErrMsgAudioInitFailed), 100u);
@@ -138,9 +138,9 @@ int main(void)
       HAL_UART_Transmit(&huart2, msgFullBuffer, strlen(msgFullBuffer), 100u);
     }
 
-    if (audioErrorCb)
+    if (isAudioError)
     {
-      audioErrorCb = 0u;
+      isAudioError = 0u;
       static const char *const msgAudioError = "Audio Error!\n";
       HAL_UART_Transmit(&huart2, msgAudioError, strlen(msgAudioError), 100u);
     }
@@ -217,7 +217,7 @@ void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
 
 void BSP_AUDIO_IN_Error_Callback(void)
 {
-  audioErrorCb = 1u;
+  isAudioError = 1u;
 }
 /* USER CODE END 4 */
 
