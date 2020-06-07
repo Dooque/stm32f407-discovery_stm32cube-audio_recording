@@ -2,7 +2,7 @@
 
 Interfacing the PDM digital embedded microphone in the STM32 F407 Discovery board.
 
-## Building
+## Project
 
 ### PlatformIO
 
@@ -14,9 +14,15 @@ This project was initilized and built using *PlatformIO, version 4.1.0* with the
 pio init --project-dir . -b genericSTM32F407VGT6 -O "framework=stm32cube" -O "platform=ststm32"
 ```
 
-#### Build Information
+### CubeMX
 
-To build this project with *Platofmrio* first install it, then open a terminal an execure:
+> [TODO]
+
+## Build
+
+### PlatformIO
+
+To build this project with *PlatformIO* first install it, then open a terminal an execure:
 
 ```
 pio run
@@ -26,7 +32,7 @@ pio run
 
 To build this project with GNU GCC and Makefile do the following steps.
 
-[TODO]
+> [TODO]
 
 ## Debug
 
@@ -34,4 +40,20 @@ To build this project with GNU GCC and Makefile do the following steps.
 
 ```
 platformio debug --interface=gdb -x .pioinit
+```
+
+## Program
+
+### PlatformIO
+
+```
+pio run -j 8 -t upload
+```
+
+## Serial Monitor
+
+### PlatformIO
+
+```
+pio device monitor -b 115200 -p /dev/ttyUSB0
 ```
