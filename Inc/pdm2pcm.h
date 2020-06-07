@@ -1,8 +1,9 @@
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * File Name          : gpio.h
-  * Description        : This file contains all the functions prototypes for 
-  *                      the gpio  
+  * File Name          : pdm2pcm.h
+  * Description        : This file provides code for the configuration
+  *                      of the pdm2pcm instances.
   ******************************************************************************
   * @attention
   *
@@ -16,39 +17,46 @@
   *
   ******************************************************************************
   */
+/* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __gpio_H
-#define __gpio_H
+#ifndef __pdm2pcm_H
+#define __pdm2pcm_H
 #ifdef __cplusplus
- extern "C" {
+  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "pdm2pcm_glo.h"
 
-/* USER CODE BEGIN Includes */
+/* USER CODE BEGIN 0 */
+/* USER CODE END 0 */
 
-/* USER CODE END Includes */
+/* Global variables ---------------------------------------------------------*/
+extern PDM_Filter_Handler_t PDM1_filter_handler;
+extern PDM_Filter_Config_t PDM1_filter_config;
 
-/* USER CODE BEGIN Private defines */
+/* USER CODE BEGIN 1 */
+/* USER CODE END 1 */
 
-/* USER CODE END Private defines */
+/* PDM2PCM init function */
+void MX_PDM2PCM_Init(void);
 
-void MX_GPIO_Init(void);
+/* USER CODE BEGIN 2 */
 
-/* USER CODE BEGIN Prototypes */
+/* PDM2PCM process function */
+uint8_t MX_PDM2PCM_Process(uint16_t *PDMBuf, uint16_t *PCMBuf);
 
-/* USER CODE END Prototypes */
+/* USER CODE END 2 */
+
+/* USER CODE BEGIN 3 */
+/* USER CODE END 3 */
 
 #ifdef __cplusplus
 }
 #endif
-#endif /*__ pinoutConfig_H */
-
-/**
-  * @}
-  */
+#endif /*__pdm2pcm_H */
 
 /**
   * @}

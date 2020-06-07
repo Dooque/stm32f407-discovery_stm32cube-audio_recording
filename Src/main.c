@@ -20,8 +20,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "crc.h"
 #include "dma.h"
 #include "i2s.h"
+#include "pdm2pcm.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
@@ -103,6 +105,8 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   MX_I2S2_Init();
+  MX_CRC_Init();
+  MX_PDM2PCM_Init();
   /* USER CODE BEGIN 2 */
 
   static char * data = "STM32F4 Discovery Started!\n";
