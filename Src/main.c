@@ -28,12 +28,16 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stm32f4_discovery_audio.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 #define AUDIO_BUFFER_SIZE 4096*2
+#define AUDIO_FREQUENCY 16000u
+#define CHANNEL_NUMBERS_IN 0u
+#define CHANNEL_NUMBERS_OUT 2u
+#define SAMPLE_BITS_RESOLUTION 16u
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -51,6 +55,9 @@
 unsigned int isHalfBuffer = 0u;
 unsigned int isFullBuffer = 0u;
 unsigned int isAudioError = 0u;
+/* PDM filters params */
+PDM_Filter_Handler_t PDM_FilterHandler[2];
+PDM_Filter_Config_t PDM_FilterConfig[2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,23 +105,12 @@ int main(void)
   MX_I2S2_Init();
   /* USER CODE BEGIN 2 */
 
-  static const char *const data = "STM32F4 Discovery Started!\n";
-  HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
+  static char * data = "STM32F4 Discovery Started!\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)data, strlen(data), 100u);
 
-  // DEFAULT_AUDIO_IN_FREQ, DEFAULT_AUDIO_IN_BIT_RESOLUTION, DEFAULT_AUDIO_IN_CHANNEL_NBR
-  if (BSP_AUDIO_IN_Init(16000u, 16u, 0u) != AUDIO_OK)
-  {
-    static const char *const ErrMsgAudioInitFailed = "BSP_AUDIO_IN_Init() -> [FAILED]\n";
-    HAL_UART_Transmit(&huart2, ErrMsgAudioInitFailed, strlen(ErrMsgAudioInitFailed), 100u);
-  }
-  else
-  {
-    static const char *const ErrMsgAudioInitOk = "BSP_AUDIO_IN_Init() -> [OK]\n";
-    HAL_UART_Transmit(&huart2, ErrMsgAudioInitOk, strlen(ErrMsgAudioInitOk), 100u);
-  }
+  static uint16_t audioBuffer[AUDIO_BUFFER_SIZE];
 
-  static volatile uint16_t audioBuffer[AUDIO_BUFFER_SIZE];
-  BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
+  HAL_I2S_Receive_DMA(&hi2s2, audioBuffer, AUDIO_BUFFER_SIZE);
 
   /* USER CODE END 2 */
 
@@ -125,24 +121,22 @@ int main(void)
     if (isHalfBuffer)
     {
       isHalfBuffer = 0u;
-      static const char *const msgHalfBuffer = "H\n";
-      HAL_UART_Transmit(&huart2, msgHalfBuffer, strlen(msgHalfBuffer), 100u);
+      static char * msgHalfBuffer = "H\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgHalfBuffer, strlen(msgHalfBuffer), 100u);
     }
 
     if (isFullBuffer)
     {
       isFullBuffer = 0u;
-      BSP_AUDIO_IN_Record(audioBuffer, AUDIO_BUFFER_SIZE * 2);
-
-      static const char *const msgFullBuffer = "F\n";
-      HAL_UART_Transmit(&huart2, msgFullBuffer, strlen(msgFullBuffer), 100u);
+      static char * msgFullBuffer = "F\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgFullBuffer, strlen(msgFullBuffer), 100u);
     }
 
     if (isAudioError)
     {
       isAudioError = 0u;
-      static const char *const msgAudioError = "Audio Error!\n";
-      HAL_UART_Transmit(&huart2, msgAudioError, strlen(msgAudioError), 100u);
+      static char * msgAudioError = "Audio Error!\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgAudioError, strlen(msgAudioError), 100u);
     }
     /* USER CODE END WHILE */
 
@@ -205,17 +199,17 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void BSP_AUDIO_IN_TransferComplete_CallBack(void)
+void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
   isFullBuffer = 1u;
 }
 
-void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
+void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
   isHalfBuffer = 1u;
 }
 
-void BSP_AUDIO_IN_Error_Callback(void)
+void HAL_I2S_ErrorCallback (I2S_HandleTypeDef * hi2s)
 {
   isAudioError = 1u;
 }
