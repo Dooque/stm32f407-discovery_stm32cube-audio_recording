@@ -27,3 +27,11 @@ pio run
 To build this project with GNU GCC and Makefile do the following steps.
 
 [TODO]
+
+## Debug
+
+### PlatformIO
+
+```
+platformio debug --interface=gdb -x .pioinit
+```
