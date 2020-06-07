@@ -2,8 +2,6 @@
   ******************************************************************************
   * @file    pdm2pcm_glo.h
   * @author  MCD Application Team
-  * @version V3.0.0
-  * @date    28-February-2017
   * @brief   Global header for PDM2PCM conversion code
   ******************************************************************************
   * @attention
