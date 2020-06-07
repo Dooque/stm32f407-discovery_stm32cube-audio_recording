@@ -20,15 +20,26 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "crc.h"
+#include "dma.h"
+#include "i2s.h"
+#include "pdm2pcm.h"
+#include "spi.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdlib.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define AUDIO_BUFFER_SIZE 4096*2
+#define AUDIO_FREQUENCY 16000u
+#define CHANNEL_NUMBERS_IN 0u
+#define CHANNEL_NUMBERS_OUT 2u
+#define SAMPLE_BITS_RESOLUTION 16u
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -41,25 +52,18 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2S_HandleTypeDef hi2s2;
-DMA_HandleTypeDef hdma_spi2_rx;
-
-SPI_HandleTypeDef hspi1;
-DMA_HandleTypeDef hdma_spi1_tx;
-
-UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+unsigned int isHalfBuffer = 0u;
+unsigned int isFullBuffer = 0u;
+unsigned int isAudioError = 0u;
+/* PDM filters params */
+PDM_Filter_Handler_t PDM_FilterHandler[2];
+PDM_Filter_Config_t PDM_FilterConfig[2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_I2S2_Init(void);
-static void MX_SPI1_Init(void);
-static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -98,30 +102,46 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_I2S2_Init();
   MX_SPI1_Init();
   MX_USART2_UART_Init();
+  MX_I2S2_Init();
+  MX_CRC_Init();
+  MX_PDM2PCM_Init();
   /* USER CODE BEGIN 2 */
 
-  static const char *const data = "Hola!\n";
-  HAL_UART_Transmit(&huart2, data, strlen(data), 100u);
-  static uint16_t buffer[1024];
-  HAL_I2S_Receive(&hi2s2, buffer, 1024, 100);
+  static char * data = "STM32F4 Discovery Started!\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)data, strlen(data), 100u);
 
-  char str_value[16];
-  for (unsigned int i = 0u; i < 1024; ++i)
-  {
-    memset(str_value, 0, 16);
-    itoa(buffer[i], str_value, 10);
-    HAL_UART_Transmit(&huart2, str_value, strlen(str_value), 100u);
-    HAL_UART_Transmit(&huart2, " ", 1, 100u);
-  }
+  static uint16_t audioBuffer[AUDIO_BUFFER_SIZE];
+
+  HAL_I2S_Receive_DMA(&hi2s2, audioBuffer, AUDIO_BUFFER_SIZE);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if (isHalfBuffer)
+    {
+      isHalfBuffer = 0u;
+      static char * msgHalfBuffer = "H\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgHalfBuffer, strlen(msgHalfBuffer), 100u);
+    }
+
+    if (isFullBuffer)
+    {
+      isFullBuffer = 0u;
+      static char * msgFullBuffer = "F\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgFullBuffer, strlen(msgFullBuffer), 100u);
+    }
+
+    if (isAudioError)
+    {
+      isAudioError = 0u;
+      static char * msgAudioError = "Audio Error!\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)msgAudioError, strlen(msgAudioError), 100u);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -182,148 +202,21 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief I2S2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2S2_Init(void)
-{
-
-  /* USER CODE BEGIN I2S2_Init 0 */
-
-  /* USER CODE END I2S2_Init 0 */
-
-  /* USER CODE BEGIN I2S2_Init 1 */
-
-  /* USER CODE END I2S2_Init 1 */
-  hi2s2.Instance = SPI2;
-  hi2s2.Init.Mode = I2S_MODE_MASTER_RX;
-  hi2s2.Init.Standard = I2S_STANDARD_LSB;
-  hi2s2.Init.DataFormat = I2S_DATAFORMAT_16B;
-  hi2s2.Init.MCLKOutput = I2S_MCLKOUTPUT_DISABLE;
-  hi2s2.Init.AudioFreq = I2S_AUDIOFREQ_8K;
-  hi2s2.Init.CPOL = I2S_CPOL_HIGH;
-  hi2s2.Init.ClockSource = I2S_CLOCK_PLL;
-  hi2s2.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
-  if (HAL_I2S_Init(&hi2s2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2S2_Init 2 */
-
-  /* USER CODE END I2S2_Init 2 */
-
-}
-
-/**
-  * @brief SPI1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI1_Init(void)
-{
-
-  /* USER CODE BEGIN SPI1_Init 0 */
-
-  /* USER CODE END SPI1_Init 0 */
-
-  /* USER CODE BEGIN SPI1_Init 1 */
-
-  /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
-  hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
-  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
-  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI1_Init 2 */
-
-  /* USER CODE END SPI1_Init 2 */
-
-}
-
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/** 
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void) 
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
-  __HAL_RCC_DMA2_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA1_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-  /* DMA2_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-}
-
 /* USER CODE BEGIN 4 */
+void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+  isFullBuffer = 1u;
+}
 
+void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+  isHalfBuffer = 1u;
+}
+
+void HAL_I2S_ErrorCallback (I2S_HandleTypeDef * hi2s)
+{
+  isAudioError = 1u;
+}
 /* USER CODE END 4 */
 
 /**
