@@ -35,11 +35,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define AUDIO_BUFFER_SIZE 4096*2
+#define AUDIO_BUFFER_SIZE_PDM 32
+#define AUDIO_BUFFER_SIZE_PCM 17
 #define AUDIO_FREQUENCY 16000u
-#define CHANNEL_NUMBERS_IN 0u
-#define CHANNEL_NUMBERS_OUT 2u
-#define SAMPLE_BITS_RESOLUTION 16u
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -54,12 +52,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-unsigned int isHalfBuffer = 0u;
-unsigned int isFullBuffer = 0u;
-unsigned int isAudioError = 0u;
-/* PDM filters params */
-PDM_Filter_Handler_t PDM_FilterHandler[2];
-PDM_Filter_Config_t PDM_FilterConfig[2];
+
+unsigned int isI2SReadingError = 0u;
+
+unsigned int isAudioBufferPDMHalf = 0u;
+unsigned int isAudioBufferPDMFull = 0u;
+static uint16_t audioBufferPDM[AUDIO_BUFFER_SIZE_PDM];
+
+unsigned int isAudioBufferPCMEmpty = 1u;
+static uint16_t audioBufferPCM[AUDIO_BUFFER_SIZE_PCM];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,9 +114,7 @@ int main(void)
   static char * data = "STM32F4 Discovery Started!\n";
   HAL_UART_Transmit(&huart2, (uint8_t *)data, strlen(data), 100u);
 
-  static uint16_t audioBuffer[AUDIO_BUFFER_SIZE];
-
-  HAL_I2S_Receive_DMA(&hi2s2, audioBuffer, AUDIO_BUFFER_SIZE);
+  HAL_I2S_Receive_DMA(&hi2s2, audioBufferPDM, AUDIO_BUFFER_SIZE_PDM);
 
   /* USER CODE END 2 */
 
@@ -122,23 +122,73 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if (isHalfBuffer)
+    if (isAudioBufferPDMHalf)
     {
-      isHalfBuffer = 0u;
+      isAudioBufferPDMHalf = 0u;
+
+      #if 1
+      if (isAudioBufferPCMEmpty)
+      {
+        audioBufferPCM[0u] = 0x0002; // ESP8266 SPI Slave WRTIE command.
+
+        // Convert PDM data into PCM.
+        for (unsigned int i = 1u; i < AUDIO_BUFFER_SIZE_PCM; ++i)
+        {
+          PDM_Filter(&audioBufferPDM[i - 1u], &audioBufferPCM[i], &PDM1_filter_handler);
+        }
+
+        isAudioBufferPCMEmpty = 0u;
+
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+        HAL_SPI_Transmit_DMA(&hspi1, (uint8_t*)audioBufferPCM, AUDIO_BUFFER_SIZE_PCM);
+      }
+      else
+      {
+        static char * msgBufferSyncError = "Synchronization error!\n";
+        HAL_UART_Transmit(&huart2, (uint8_t *)msgBufferSyncError, strlen(msgBufferSyncError), 100u);
+        while (1) {}
+      }
+      #endif
+
       static char * msgHalfBuffer = "H\n";
       HAL_UART_Transmit(&huart2, (uint8_t *)msgHalfBuffer, strlen(msgHalfBuffer), 100u);
     }
 
-    if (isFullBuffer)
+    if (isAudioBufferPDMFull)
     {
-      isFullBuffer = 0u;
+      isAudioBufferPDMFull = 0u;
+
+      #if 0
+      if (isAudioBufferPCMEmpty)
+      {
+        audioBufferPCM[0u] = 0x0002; // ESP8266 SPI Slave WRTIE command.
+
+        // Convert PDM data into PCM.
+        for (unsigned int i = 1u; i < AUDIO_BUFFER_SIZE_PCM; ++i)
+        {
+          PDM_Filter(&audioBufferPDM[i - 1u + (AUDIO_BUFFER_SIZE_PDM / 2u)], &audioBufferPCM[i], &PDM1_filter_handler);
+        }
+
+        isAudioBufferPCMEmpty = 0u;
+
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+        HAL_SPI_Transmit_DMA(&hspi1, (uint8_t*)audioBufferPCM, AUDIO_BUFFER_SIZE_PCM);
+      }
+      else
+      {
+        static char * msgBufferSyncError = "Synchronization error!\n";
+        HAL_UART_Transmit(&huart2, (uint8_t *)msgBufferSyncError, strlen(msgBufferSyncError), 100u);
+        while (1) {}
+      }
+      #endif
+
       static char * msgFullBuffer = "F\n";
       HAL_UART_Transmit(&huart2, (uint8_t *)msgFullBuffer, strlen(msgFullBuffer), 100u);
     }
 
-    if (isAudioError)
+    if (isI2SReadingError)
     {
-      isAudioError = 0u;
+      isI2SReadingError = 0u;
       static char * msgAudioError = "Audio Error!\n";
       HAL_UART_Transmit(&huart2, (uint8_t *)msgAudioError, strlen(msgAudioError), 100u);
     }
@@ -205,17 +255,23 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  isFullBuffer = 1u;
+  isAudioBufferPDMFull = 1u;
 }
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
-  isHalfBuffer = 1u;
+  isAudioBufferPDMHalf = 1u;
 }
 
 void HAL_I2S_ErrorCallback (I2S_HandleTypeDef * hi2s)
 {
-  isAudioError = 1u;
+  isI2SReadingError = 1u;
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+  isAudioBufferPCMEmpty = 1u;
 }
 /* USER CODE END 4 */
 
